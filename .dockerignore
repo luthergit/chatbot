@@ -1,0 +1,14 @@
+# Python / uv
+.venv
+__pycache__
+*.pyc
+
+# Env files
+.env
+
+# VCS
+.git
+.gitignore
+
+# Large docs
+Building AI Workflows with FastAPI and LangGraph (Step-by-Step Guide) | by GenAI Lab | Jul, 2025* 
