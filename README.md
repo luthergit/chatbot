@@ -5,4 +5,4 @@
 - Endpoint: `POST /chat` body: `{ "message": "Hello" }`
 - Health: `GET /health`
 
-Requirements: Python 3.11+, `uv` installed. 
+Requirements: Python 3.11+, `uv` installed.. 
