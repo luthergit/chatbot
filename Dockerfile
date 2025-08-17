@@ -28,4 +28,4 @@ COPY run.sh ./run.sh
 EXPOSE 8001
 
 # Default command: run the API server
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"] 
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8001"] 
