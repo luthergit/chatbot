@@ -2,7 +2,7 @@ import os
 
 class Settings:
     def __init__(self) -> None:
-        self.app_url = os.environ.get("APP_URL", "http://localhost:8000")
+        self.app_url = os.environ.get("APP_URL", "http://127.0.0.1:8001")
         self.app_name = os.environ.get("APP_NAME", "Chatbot (OpenRouter)")
         self.openrouter_api_key = os.environ.get("OPENROUTER_API_KEY", "")
         self.openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
