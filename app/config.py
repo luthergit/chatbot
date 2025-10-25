@@ -11,6 +11,10 @@ class Settings:
         self.max_tokens = int(os.environ.get("OPENROUTER_MAX_TOKENS", "512"))
         self.system_prompt = os.environ.get("SYSTEM_PROMPT", "You are a concise, helpful assistant.")
 
+        origins = os.environ.get("ALLOWED_ORIGINS")
+        self.cors_allow_origins = [o.strip() for o in origins.split(",") if o.strip()]
+
+
     def require_api_key(self) -> None:
         if not self.openrouter_api_key:
             raise RuntimeError("OPENROUTER_API_KEY is not set")
