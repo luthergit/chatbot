@@ -13,7 +13,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_allow_origins,
     allow_methods=['POST'],
-    allow_headers=['Content-Type']
+    allow_headers=['Content-Type', 'Authorization']
 )
 graph = build_graph()
 

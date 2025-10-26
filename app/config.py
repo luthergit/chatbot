@@ -13,6 +13,19 @@ class Settings:
 
         origins = os.environ.get("ALLOWED_ORIGINS")
         self.cors_allow_origins = [o.strip() for o in origins.split(",") if o.strip()]
+        
+        raw_users = os.environ.get("BASIC_USERS")
+
+        users = {}
+        for pair in raw_users.split(","):
+            pair = pair.strip()
+
+            if not pair or ':' not in pair:
+                continue
+            user, pwd = pair.split(":", 1)
+
+            users[user.strip()] = pwd.strip()
+        self.basic_users = users
 
 
     def require_api_key(self) -> None:
