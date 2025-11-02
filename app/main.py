@@ -6,24 +6,27 @@ from app.config import settings
 from fastapi import FastAPI, Depends
 from app.auth import get_current_user
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from app.schemas import ChatRequest, ChatResponse
 from app.chat_graph import build_graph, ChatState
 from app.storage import init_db, close_db, load_messages, save_message
 
-app = FastAPI(title="Chatbot (OpenRouter + FastAPI + LangGraph)", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()
+    try:
+        yield
+    finally:
+        await close_db()
+
+app = FastAPI(title="Chatbot (OpenRouter + FastAPI + LangGraph)", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_allow_origins,
     allow_methods=['POST', 'OPTIONS'],
     allow_headers=['Content-Type', 'Authorization']
 )
-@app.on_event("startup")
-async def startup():
-    await init_db()
-
-@app.on_event("shutdown")
-async def shutdown():
-    await close_db()
 
 graph = build_graph()
 
