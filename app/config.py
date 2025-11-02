@@ -26,6 +26,7 @@ class Settings:
 
             users[user.strip()] = pwd.strip()
         self.basic_users = users
+        self.max_history = int(os.environ.get("MAX_HISTORY"))
 
 
     def require_api_key(self) -> None:
