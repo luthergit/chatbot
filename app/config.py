@@ -10,6 +10,11 @@ class Settings:
         self.temperature = float(os.environ.get("OPENROUTER_TEMPERATURE", "0.2"))
         self.max_tokens = int(os.environ.get("OPENROUTER_MAX_TOKENS", "512"))
         self.system_prompt = os.environ.get("SYSTEM_PROMPT", "You are a concise, helpful assistant.")
+        self.session_secret = os.environ.get("SESSION_SECRET", "chatbot-change-me")
+        self.session_max_age = int(os.environ.get("SESSION_MAX_AGE", "3600"))
+        self.session_cookie_name = os.environ.get("SESSION_COOKIE_NAME", "session")
+        self.session_cookies_secure = os.environ.get("SESSION_COOKIES_SECURE", "true").lower() == "true"
+        self.session_cookies_samesite = os.environ.get("SESSION_COOKIES_SAMESITE", "none")
 
         origins = os.environ.get("ALLOWED_ORIGINS")
         self.cors_allow_origins = [o.strip() for o in origins.split(",") if o.strip()]
