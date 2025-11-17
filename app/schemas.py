@@ -12,6 +12,7 @@ class ChatRequest(BaseModel):
     history: Optional[List[ChatMessage]] = None
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
+    stream: Optional[bool] = None
 
 class Usage(BaseModel):
     prompt_tokens: Optional[int] = None

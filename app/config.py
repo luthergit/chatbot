@@ -15,6 +15,7 @@ class Settings:
         self.session_cookie_name = os.environ.get("SESSION_COOKIE_NAME", "session")
         self.session_cookies_secure = os.environ.get("SESSION_COOKIES_SECURE", "true").lower() == "true"
         self.session_cookies_samesite = os.environ.get("SESSION_COOKIES_SAMESITE", "none")
+        self.streaming_enabled = os.environ.get("STREAMING_ENABLED", "false").lower() == "true"
 
         origins = os.environ.get("ALLOWED_ORIGINS")
         self.cors_allow_origins = [o.strip() for o in origins.split(",") if o.strip()]

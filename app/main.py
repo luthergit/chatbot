@@ -1,15 +1,17 @@
-
+import json
 from dotenv import load_dotenv
 load_dotenv()
 
 from app.config import settings 
-from fastapi import FastAPI, Depends, Response
+from fastapi import FastAPI, Depends, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.schemas import ChatRequest, ChatResponse
 from app.chat_graph import build_graph, ChatState
 from app.storage import init_db, close_db, load_messages, save_message
 from app.auth import _create_session_token, get_current_user_cookie, verify_user_password
+from starlette.responses import StreamingResponse
+
 
 
 @asynccontextmanager
@@ -61,22 +63,63 @@ async def health():
 async def session(user: str = Depends(get_current_user_cookie)) -> dict:
     return {'user': user}
 
-@app.post("/chat", response_model=ChatResponse)
+@app.post("/chat")
 async def chat(req: ChatRequest, user: str = Depends(get_current_user_cookie)) -> ChatResponse:
-    messages = await load_messages(user, limit=settings.max_history)
+    use_stream = bool(settings.streaming_enabled and req.stream)
 
+    messages = await load_messages(user, limit=settings.max_history)
     messages.append({"role": "user", "content": req.message})
 
-    state: ChatState = {"messages": messages}
-    result: ChatState = await graph.ainvoke(state)
+    if not use_stream:
 
-    reply = result.get("reply", "")
+        state: ChatState = {"messages": messages}
+        result: ChatState = await graph.ainvoke(state)
+
+        reply = result.get("reply", "")
+        await save_message(user, "user", req.message)
+        await save_message(user, "assistant", reply)
+
+        return ChatResponse(
+            reply=reply,
+            model=None,
+            finish_reason=None,
+            usage=None,
+        )
+
     await save_message(user, "user", req.message)
-    await save_message(user, "assistant", reply)
+    state: ChatState = {"messages": messages}
 
-    return ChatResponse(
-        reply=reply,
-        model=None,
-        finish_reason=None,
-        usage=None,
-    ) 
+    async def event_gen():
+        chunks = []
+
+        try:
+            async for event in graph.astream_events(
+                state,
+                version="v1",
+                # include_types=['on_chat_model_stream', "on_llm_stream"]
+            ):
+                # print("EV:", event.get("event"))
+                ev = event.get("event")
+                if ev in ('on_chat_model_stream', "on_llm_stream"):
+                    data = event.get("data") or {}
+                    chunk = data.get("chunk")
+                    if hasattr(chunk, 'content'): #or data.get("token") or data.get("output"):
+                        delta = chunk.content or ""
+                        if delta:
+                            chunks.append(delta)
+                            yield f"data: {json.dumps({'delta': delta})}\n\n"
+            
+            full = "".join(chunks)
+            await save_message(user, "assistant", full)
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            yield f"event: error\ndata: {json.dumps({'message': str(e)})}\n\n"
+
+        
+    return StreamingResponse(event_gen(), media_type="text/event-stream", headers={
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",  # helps if behind nginx in future
+        "Connection": "keep-alive",
+    })
+
+
