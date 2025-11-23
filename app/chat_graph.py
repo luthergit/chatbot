@@ -5,6 +5,7 @@ from app.config import settings
 
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from app.schemas import ChatState
 
 def with_system_prompt(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     if not any(m.get("role") == "system" for m in messages):
@@ -24,30 +25,47 @@ def to_lc_messages(messages: List[Dict[str,Any]]) -> List[Dict[str,Any]]:
             out.append(AIMessage(content=content))
 
     return out
-_llm = ChatOpenAI(api_key=settings.openrouter_api_key,
-                  base_url=settings.openrouter_base_url,
-                  model=settings.openrouter_model,
-                  temperature=settings.temperature,
-                  max_tokens=settings.max_tokens,
-                  streaming = True)
+# _llm = ChatOpenAI(api_key=settings.openrouter_api_key,
+#                   base_url=settings.openrouter_base_url,
+#                   model=settings.openrouter_model,
+#                   temperature=settings.temperature,
+#                   max_tokens=settings.max_tokens,
+#                   streaming = True)
 
-class ChatState(TypedDict, total=False):
-    messages: List[Dict[str, Any]]
-    reply: str
+# class ChatState(TypedDict, total=False):
+#     messages: List[Dict[str, Any]]
+#     reply: str
 
-async def llm_node(state: ChatState) -> ChatState:
-    messages = state.get("messages", [])
-    # Ensure a system prompt is present
-    messages = with_system_prompt(messages)
-    lc_msgs = to_lc_messages(messages)
+def build_graph(
+        model: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        streaming: bool = True,
+        ):
+    model_name = model or settings.openrouter_model
+    temperature = temperature if temperature is not None else settings.temperature
+    max_tokens = max_tokens if max_tokens is not None else settings.max_tokens
 
-    result = await _llm.ainvoke(lc_msgs)
-    reply_text = result.content or ""
-    messages = messages + [{"role": "assistant", "content": reply_text}]
+    llm = ChatOpenAI(api_key=settings.openrouter_api_key,
+                     base_url=settings.openrouter_base_url,
+                     model=model_name,
+                     temperature=temperature,
+                     max_tokens=max_tokens,
+                     streaming=streaming)
 
-    return {"messages": messages, "reply": reply_text}
+    async def llm_node(state: ChatState) -> ChatState:
+        messages = state.get("messages", [])
+        # Ensure a system prompt is present
+        messages = with_system_prompt(messages)
+        lc_msgs = to_lc_messages(messages)
 
-def build_graph():
+        result = await llm.ainvoke(lc_msgs)
+        reply_text = result.content or ""
+        messages = messages + [{"role": "assistant", "content": reply_text}]
+
+        return {"messages": messages, "reply": reply_text}
+
+
     graph = StateGraph(ChatState)
     graph.add_node("llm", llm_node)
     graph.set_entry_point("llm")

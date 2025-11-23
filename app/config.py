@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
 
 class Settings:
@@ -6,7 +9,7 @@ class Settings:
         self.app_name = os.environ.get("APP_NAME", "Chatbot (OpenRouter)")
         self.openrouter_api_key = os.environ.get("OPENROUTER_API_KEY", "")
         self.openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
-        self.openrouter_model = os.environ.get("OPENROUTER_MODEL", "openrouter/auto")
+        self.openrouter_model = os.environ.get("OPENROUTER_MODEL", "x-ai/grok-4.1-fast")
         self.temperature = float(os.environ.get("OPENROUTER_TEMPERATURE", "0.2"))
         self.max_tokens = int(os.environ.get("OPENROUTER_MAX_TOKENS", "512"))
         self.system_prompt = os.environ.get("SYSTEM_PROMPT", "You are a concise, helpful assistant.")
@@ -16,6 +19,7 @@ class Settings:
         self.session_cookies_secure = os.environ.get("SESSION_COOKIES_SECURE", "true").lower() == "true"
         self.session_cookies_samesite = os.environ.get("SESSION_COOKIES_SAMESITE", "none")
         self.streaming_enabled = os.environ.get("STREAMING_ENABLED", "false").lower() == "true"
+        self.reasoning_max_tokens = int(os.environ.get("REASONING_MAX_TOKENS", "2048"))
 
         origins = os.environ.get("ALLOWED_ORIGINS")
         self.cors_allow_origins = [o.strip() for o in origins.split(",") if o.strip()]
@@ -33,6 +37,9 @@ class Settings:
             users[user.strip()] = pwd.strip()
         self.basic_users = users
         self.max_history = int(os.environ.get("MAX_HISTORY"))
+        self.redis_url = os.environ.get("REDIS_URL")
+        self.queue_name = os.environ.get("REASONING_QUEUE_NAME")
+        self.reasoning_model = os.environ.get("REASONING_MODEL", self.openrouter_model)
 
 
     def require_api_key(self) -> None:

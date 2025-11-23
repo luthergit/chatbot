@@ -18,6 +18,7 @@ dependencies = [
   "langchain-core>=1.0.5",
   "redis>=7.0.1",
   "rq>=2.6.0",
+  "rq-dashboard>=0.8.5",
 ]
 
 [tool.uv]

@@ -6,12 +6,14 @@ from app.config import settings
 from fastapi import FastAPI, Depends, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.schemas import ChatRequest, ChatResponse
+from app.schemas import ChatRequest, ChatResponse, ReasoningRequest, ReasoningEnqueueResponse, ReasoningStatusResponse
 from app.chat_graph import build_graph, ChatState
 from app.storage import init_db, close_db, load_messages, save_message
 from app.auth import _create_session_token, get_current_user_cookie, verify_user_password
 from starlette.responses import StreamingResponse
 
+from app.queue import enqueue_reasoning, get_job
+from typing import Dict, Any
 
 
 @asynccontextmanager
@@ -26,7 +28,7 @@ app = FastAPI(title="Chatbot (OpenRouter + FastAPI + LangGraph)", version="0.1.0
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_allow_origins,
-    allow_methods=['POST', 'OPTIONS'],
+    allow_methods=['GET', 'POST', 'OPTIONS'],
     allow_headers=['Content-Type', 'Authorization'],
     allow_credentials=True
 )
@@ -122,4 +124,40 @@ async def chat(req: ChatRequest, user: str = Depends(get_current_user_cookie)) -
         "Connection": "keep-alive",
     })
 
+
+
+@app.post("/reasoning", response_model=ReasoningEnqueueResponse)
+async def reasoning(req: ReasoningRequest, user: str = Depends(get_current_user_cookie)) -> Dict[str, Any]:
+    messages = await load_messages(user, limit=settings.max_history)
+    messages.append({'role': 'user', 'content': req.message})
+
+    await save_message(user, 'user', req.message)
+
+    job = enqueue_reasoning(messages)
+    return {'job_id': job.get_id()}
+
+@app.get("/reasoning/{job_id}", response_model=ReasoningStatusResponse)
+async def reasoning_status(job_id:str, user: str = Depends(get_current_user_cookie)) -> Dict[str, Any]:
+    try:
+        job = get_job(job_id)
+    except Exception as e:
+        raise HTTPException(status_code=404, detail= 'Job not found')
+    
+    status = job.get_status(refresh=True)
+
+    if status == 'finished':
+        result = job.result or {}
+
+        saved = job.meta.get('saved')
+        if not saved and isinstance(result, dict) and 'reply' in result:
+            await save_message(user, 'assistant', result['reply'])
+            job.meta['saved'] = True
+            job.save_meta()
+        return {'status': 'finished', 'result': result}
+    
+    elif status == 'failed':
+        err = job.exc_info or 'Job failed'
+        return {'status': 'failed', 'error':err}
+    
+    return {'status': status}
 

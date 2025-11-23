@@ -1,7 +1,11 @@
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Dict, Any, TypedDict
 from pydantic import BaseModel, Field
 
 Role = Literal["system", "user", "assistant", "tool"]
+
+class ChatState(TypedDict, total=False):
+    messages: List[Dict[str, Any]]
+    reply: str
 
 class ChatMessage(BaseModel):
     role: Role
@@ -25,3 +29,14 @@ class ChatResponse(BaseModel):
     model: Optional[str] = None
     finish_reason: Optional[str] = None
     usage: Optional[Usage] = None 
+
+class ReasoningRequest(BaseModel):
+    message: str
+
+class ReasoningEnqueueResponse(BaseModel):
+    job_id: str
+
+class ReasoningStatusResponse(BaseModel):
+    status: str
+    result: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
