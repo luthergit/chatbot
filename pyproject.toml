@@ -19,6 +19,8 @@ dependencies = [
   "redis>=7.0.1",
   "rq>=2.6.0",
   "rq-dashboard>=0.8.5",
+  "langfuse>=3.10.1",
+  "langchain>=1.1.0",
 ]
 
 [tool.uv]

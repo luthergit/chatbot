@@ -11,6 +11,7 @@ from app.chat_graph import build_graph, ChatState
 from app.storage import init_db, close_db, load_messages, save_message
 from app.auth import _create_session_token, get_current_user_cookie, verify_user_password
 from starlette.responses import StreamingResponse
+from app.observability import observe, lf_handler
 
 from app.queue import enqueue_reasoning, get_job
 from typing import Dict, Any
@@ -75,7 +76,9 @@ async def chat(req: ChatRequest, user: str = Depends(get_current_user_cookie)) -
     if not use_stream:
 
         state: ChatState = {"messages": messages}
-        result: ChatState = await graph.ainvoke(state)
+        result: ChatState = await graph.ainvoke(state, 
+                                                config={"callbacks":[lf_handler], "metadata": {"langfuse_user_id": user},
+                                                       "run_name": "chat"})
 
         reply = result.get("reply", "")
         await save_message(user, "user", req.message)
@@ -98,6 +101,7 @@ async def chat(req: ChatRequest, user: str = Depends(get_current_user_cookie)) -
             async for event in graph.astream_events(
                 state,
                 version="v1",
+                config={"callbacks":[lf_handler], "metadata": {"langfuse_user_id": user}, "run_name": "chat"},
                 # include_types=['on_chat_model_stream', "on_llm_stream"]
             ):
                 # print("EV:", event.get("event"))
@@ -133,7 +137,7 @@ async def reasoning(req: ReasoningRequest, user: str = Depends(get_current_user_
 
     await save_message(user, 'user', req.message)
 
-    job = enqueue_reasoning(messages)
+    job = enqueue_reasoning(messages, user)
     return {'job_id': job.get_id()}
 
 @app.get("/reasoning/{job_id}", response_model=ReasoningStatusResponse)

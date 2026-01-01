@@ -7,11 +7,12 @@ from app.config import settings
 _redis = redis.from_url(settings.redis_url)
 q = Queue(name=settings.queue_name, connection=_redis)
 
-def enqueue_reasoning(messages: List[Dict[str, Any]]) -> str:
+def enqueue_reasoning(messages: List[Dict[str, Any]], user: str) -> str:
     from app.reasoning_task import run_reasoning
     job = q.enqueue(
         run_reasoning, 
-        messages, 
+        messages,
+        user, 
         job_timeout=420, # 7 minutes
         ttl=600, # 10 minutes
         result_ttl=600 # 10 minutes
